@@ -1,4 +1,3 @@
-# ajax-hustle-bunny
 Ajax Hustle Bunny
 ===================
 #### <i class="icon-file"></i> Instructions, getting started, "Hop to it!"

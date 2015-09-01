@@ -11,47 +11,52 @@ Please bear in mind this tool is in beta. It uses jQuery, but only for now, in t
 
 --- To subscribe to ajax events handled through the Ajax Hustle Bunny you may use the `ajaxEvents` subscription handler.
 > `ajaxHustleBunny.ajaxEvents.subscribe('some-handle', someObject.someHandlerFn);`
-> Now when a new view is loaded, `someObject` will have the chance to take action based on the "endpoint", the endpoint for `/rabbit/hole` is `"rabbit/hole"`. Ajax Hustle Bunny works using a MVC url structure assumption. So the rabbit calls "model/view" an endpoint and anything after that is called the "action" which is passed as the second argument to any subscriber upon page changes.
+> Now when a new view is loaded, `someObject` will have the chance to take action based on the "endpoint", the endpoint for `/rabbit/hole` is `"rabbit/hole"`. Ajax Hustle Bunny works using a MVC url structure assumption. So the rabbit calls "controller/view" an endpoint and anything after that is called the "action" which is passed as the second argument to any subscriber upon page changes.
 >
 > **You can handle page changes within a module easily like so:**
-```js
-var forumModule = (function (window, undefined) {
-  // private variable to hold actions specific to my module.
-  var postID;
 
-  /* Setup, 1 time for entire application. */
-  function init () {
-  // Subscribe to be notified of ALL Ajax Hustle Bunny view changes
+```js
+  var forumModule = (function (window, undefined) {
+    // private variable to hold actions specific to my module.
+    var postID;
+    
+    
+    // Setup, 1 time for entire application.
+    function init () {
+    // Subscribe to be notified of ALL Ajax Hustle Bunny view changes
     ajaxHustleBunny
       .ajaxEvents
       .subscribe('forum-view', forumModule.ajaxHustleHandler);
-  }
-
-  /* Every View Change, this is called by AjaxHustleBunny */
-  function ajaxHustleHandler (endpoint, action) {
-    // The endpoint can be used to
- 	switch (endpoint) {
-	  case 'forum/view':
-	    displayPostDetails(action);
-	  case 'forum/reply':
-	    // Set the private var postID so other module methods may access it.
-	    postID = parseInt(action, 10);
-	    break;
-	  default:
-	    // This is some other modules endpoint, the url "action" isn't a postID
-	    postID = null;
     }
-  }
-
-  /* Public API */
-  return {
-	init: init
-  };
-}(window));
-
-
-// This line could be called from elsewhere in a main module perhaps.
-forumModule.init();
+    
+    
+    /* Every View Change, this is called by AjaxHustleBunny */
+    function ajaxHustleHandler (endpoint, action) {
+      // The endpoint can be used to
+      switch (endpoint) {
+      case 'forum/view':
+        displayPostDetails(action);
+      case 'forum/reply':
+        // Set the private var postID so other module methods may access it.
+        postID = parseInt(action, 10);
+          break;
+          default:
+          // This is some other modules endpoint, the url "action" isn't a postID
+          postID = null;
+      }
+    }
+    
+    
+    /* Public API */
+    return {
+      init: init
+    };
+    
+  }(window));
+  
+  
+  // This line could be called from elsewhere in a main module perhaps.
+  forumModule.init();
 ```
 
  * TODO: Explain the **did / when / after** subscription handler. It's basically a spring loaded event system that allows ordering through all modules without coupling. It's not based on promises, there are no return values. When a module does something significant or important to another module, you could decide to make that known to Ajax Hustle Bunny through `ahb.ajaxEvents.did('something-awesome')` and then if another module had a dependant action it could call `ahb.ajaxEvents.when('something-awesome', callback)` or `ahb.ajaxEvents.after('something-awesome', callback)` .

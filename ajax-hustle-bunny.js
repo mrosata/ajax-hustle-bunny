@@ -11,26 +11,6 @@
  *
  * License: MIT 2015 created by Michael Rosata. mrosata1984@gmail.com
  *
- * Instructions:
- *
- *      --- To make a link use Ajax, simply add the 'ahb-click' class and data-ahb-action attribute
- *
- *        ex: <a href="#" class="ahb-click" data-ahb-action="/rabbit/hole">Hop-Hop!</a>
- *            this will load into the main container www.example.com/rabbit/hole
- *            and it will inform any subscribers to the fact that the view has been changed so that your
- *            class/objects can react/behave appropriately.
- *
- *      --- To subscribe to ajax events made by the AjaxHustleBunny use the ajaxEvents subscribe method.
- *
- *        ex: ajaxHustleBunny.ajaxEvents.subscribe('any-handle', myObject.myHandler);
- *            now, when a new view is loaded, myObject will have the chance to take any action needed
- *            based on the "endpoint", the endpoint for /rabbit/hole = "rabbit/hole". So that would be
- *            the argument passed to myObject.myHandler after ajax events.
- *
- *      ---- To when/did
- *           //Todo: Explain the when/did subscription handler. It's basically a spring loaded event. Once the spring pops anyone can clearly see that yes it did occur, but it can't be listened to twice. It is extremely useful in handling load order throughout applications that may load many scripts from various domains. The scripts may not always load in the same order but you want to start each event as soon as possible. So this pattern will allow for your setup functions to fire when loaded and declare dependancies. If the dependancies have been met already then it will be told that. If not then it can set a callback to fire when dependancies are met. I like to think of this pattern as a dominoe effect.
- *
- *      //TODO: Might be good to have an event that fires before the ajax request is made. However since there is no need for it yet, I'm not going to create more noise.
  */
 
 var ajaxHustleBunny = (function($, window, undefined) {
@@ -40,7 +20,7 @@ var ajaxHustleBunny = (function($, window, undefined) {
     'complaints/index' : 'controls'
   };
 
-  function filterEndpoint(endpoint, action) {
+  function filterEndpoint(endpoint) {
     if (/^\/[^/]+\/?$/.test(endpoint)) {
       endpoint = endpoint.replace(/(^\/[^/]+)\/?$/, '$1/index');
     }
@@ -122,8 +102,8 @@ var ajaxHustleBunny = (function($, window, undefined) {
      * just pass the endpoint into this method from anywhere in program and AjaxHustleBunny
      * will figure it out.
      *
-     * @param string endpoint
-     * @param bool force - whether to update state regardless.
+     * @param endpoint string - the '/controller/module' from url
+     * @param force bool - whether to update state regardless.
      */
     handleStateUpdate: function(endpoint, force) {
       if (window && window.history) {
@@ -191,11 +171,13 @@ var ajaxHustleBunny = (function($, window, undefined) {
      * If any views have actions that should be fired along with them, or cleanup that has to be fired
      * when the page navigates off of them, this is where that is done. It is called automatically so there
      * is no need to call on your own. (it calls on any page load or ajax load)
+     *
      * @param endpoint
+     * @param actionValue
      */
     fireOffEndpointAction: function(endpoint, actionValue) {
       var historyEndpoint = endpoint;
-      actionValue = actionValue || filterAction(endpoint);;
+      actionValue = actionValue || filterAction(endpoint);
       if (/^\/[^/]+\/?$/.test(endpoint)) {
         endpoint = endpoint.replace(/(^\/[^/]+)\/?$/, '$1/index');
         historyEndpoint = endpoint;
@@ -248,6 +230,7 @@ var ajaxHustleBunny = (function($, window, undefined) {
 
     },
 
+
     /**
      * After certain parts of the page load, they may need some special actions to be taken. If so, that is what
      * these methods are for.
@@ -258,10 +241,14 @@ var ajaxHustleBunny = (function($, window, undefined) {
        * This isn't a typical PubSub, it's not a hub to allow objects to listen to each other, it only is a notifier of
        * endpoints or actions fired off from ajax. To subscribe just pass method to call as arg from outside to
        * ajaxHustleBunny.ajaxEvents.subscribe( method ).
-       * @param object       - The object of which the method belongs to.
-       * @param notifyMethod - function/method to call with name of any endpoint fired
+       * @param pubName       - The object of which the method belongs to.
+       * @param notifyMethod  - function/method to call with name of any endpoint fired
+       * @param initialNotice - Immediate Initial Notification of the current page. This is good because the purpose of this is to keep all the objects
+       *                        that manage views synced up and informed. While each publish gets to each object in sequence, their first notifications
+       *                        are split in time due to the fact that they may not have registered to get notices yet. So set this 3rd option to true
+       *                        to get an instant notification of the current page as if it was just loaded by ajax.
        */
-      subscribe: function(pubName, notifyMethod) {
+      subscribe: function(pubName, notifyMethod, initialNotice) {
         var subs;
         if (!this.subscribers) {
           this.subscribers = {};
@@ -272,12 +259,17 @@ var ajaxHustleBunny = (function($, window, undefined) {
         } else {
           if (!!notifyMethod)
             subs[pubName] = notifyMethod;
+          if (initialNotice) {
+            // If asked for by new subscriber, we should publish immediately to them
+            notifyMethod(this.currentEndpoint, this.currentAction);
+          }
         }
       },
 
       /**
        * Publish out endpoints after firing any endpoint method inside house first (ajaxHustleBunny)
-       * @param endpoint
+       * @param endpoint - url endpoint 'controller/model'
+       * @param action  - url action
        */
       publish: function(endpoint, action) {
         // set the globals (these are going to be handy for initial page load handlers) 07/15/2015
@@ -304,6 +296,14 @@ var ajaxHustleBunny = (function($, window, undefined) {
       // Methods waiting for things to finish.
       waiting: {},
 
+      /**
+       * We will reset this on any ajax view change.
+       */
+      clearDidWhenNow: function() {
+        //this.finished = [];
+        this.waiting = {};
+      },
+
       did: function(what) {
         if (this.finished.indexOf(what) == -1) {
           // Add 'what' was done to list if not there already
@@ -324,18 +324,45 @@ var ajaxHustleBunny = (function($, window, undefined) {
         }
       },
 
+
+      /**
+       * Set a 'tell' to fire on the next 'what'.
+       *
+       * This will never fire instantly. It has to wait for something to call did(what)
+       * @param what
+       * @param tell
+       */
       when: function(what, tell) {
+        if (!this.waiting.hasOwnProperty(what)) {
+          // If we don't have waiting list for this 'what', then start one!
+          this.waiting[what] = [];
+        }
+        this.waiting[what].push(tell);
+      },
+
+
+      /**
+       * Same as when() except this will fire immediately if the did(what) has already been called
+       * @param what
+       * @param tell
+       */
+      after: function(what, tell) {
         if (this.finished.indexOf(what) > -1 && $.isFunction(tell)) {
           // If the 'what' has already happened, then tell the 'tell'
           tell(what);
         } else {
-          if (!this.waiting.hasOwnProperty(what)) {
-            // If we don't have waiting list for this 'what', then start one!
-            this.waiting[what] = [];
-          }
-          this.waiting[what].push(tell);
+          // Now put this in the when list, because what it is waiting for has not happened yet
+          this.when(what, tell);
         }
-      }
+      },
+
+
+      /**
+       * LEGACY CODE
+       *   TODO: SEE IF THESE PRE-AJAX-SUB-PUB METHODS CAN BE REMOVED.
+       */
+      'complaints/controls': function() {}
+
 
     } // End ahb.ajaxEvents
 

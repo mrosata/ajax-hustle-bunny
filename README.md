@@ -2,7 +2,7 @@ Ajax Hustle Bunny
 ===================
 #### <i class="icon-file"></i> Instructions, getting started, "Hop to it!"
 
-Please bear in mind this tool is in beta. I would only suggest using it if you also may want to contribute to it. It's a simple module for handling ajax view changes and ajax related events throughout a web application. It implements history in supported browsers, loads views, notifies all view modules through callbacks on every view change and manages a global event system name `did / when / after` which uses similar terms as, but does not implement (as of yet), promises. I will be updating this as I am currently using it in a large application. The application is going through beta now, so I'll be able to keep up on changes (hopefully).
+Please bear in mind this tool is in beta. It uses jQuery, but only for now, in the future I will take it out. I would only suggest using it if you also may want to contribute to it or make it better for yourself. It's a simple module for handling ajax view changes and ajax related events throughout a web application. It implements history in supported browsers, loads views, notifies all view modules through callbacks on every view change and manages a global event system name `did / when / after` which uses similar terms as, but does not implement (as of yet), promises. It's in a changing state right now. I will be updating this as I am currently using it in a large application. The application is going through beta now, so I'll be able to keep up on changes (hopefully).
 
  --- To make a link use Ajax, simply add inline html `class="ahb-click"` and attribute `data-ahb-action="/some/module"`.
  > ex: `<a href="#" class="ahb-click" data-ahb-action="/rabbit/hole">Hop-Hop!</a>`

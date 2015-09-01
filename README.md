@@ -14,6 +14,7 @@ Please bear in mind this tool is in beta. It uses jQuery, but only for now, in t
 > Now when a new view is loaded, `someObject` will have the chance to take action based on the "endpoint", the endpoint for `/rabbit/hole` is `"rabbit/hole"`. Ajax Hustle Bunny works using a MVC url structure assumption. So the rabbit calls "controller/view" an endpoint and anything after that is called the "action" which is passed as the second argument to any subscriber upon page changes.
 >
 > **You can handle page changes within a module easily like so:**
+> Let's imagine a little module called `forumModule` that handles the "forum" controller for the front end of your application. It might be created as a JS module like so with its own scope, private vars and public facing `init()` method called once on page load. From `init` we subscribe to listen to ahb view changes, and then handle them with our private function `ajaxHustleHandler`. This module can be cookie cut across the application to build off for all browser modules.
 
 ```js
   var forumModule = (function (window, undefined) {
@@ -26,7 +27,7 @@ Please bear in mind this tool is in beta. It uses jQuery, but only for now, in t
     // Subscribe to be notified of ALL Ajax Hustle Bunny view changes
     ajaxHustleBunny
       .ajaxEvents
-      .subscribe('forum-view', forumModule.ajaxHustleHandler);
+      .subscribe('forum-view', ajaxHustleHandler);
     }
     
     
